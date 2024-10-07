@@ -25,6 +25,22 @@ done <<< "$VM_LIST"
 # 让用户选择虚拟机
 read -p "输入对应的虚拟机序号: " -a VM_INDEXES
 
+# 选择网络层级
+echo "请选择新的网络类型:"
+echo "1) 标准层级的网络"
+echo "2) 普通层级"
+read -p "输入对应的选项 (1 或 2): " NETWORK_TYPE
+
+# 根据用户选择的网络层级设置相应的值
+if [ "$NETWORK_TYPE" -eq 1 ]; then
+    NETWORK_TIER="STANDARD"
+elif [ "$NETWORK_TYPE" -eq 2 ]; then
+    NETWORK_TIER="PREMIUM"
+else
+    echo "无效的选择，使用普通层级。"
+    NETWORK_TIER="PREMIUM"
+fi
+
 # 遍历选择的虚拟机序号并执行 IP 更换操作
 for INDEX in "${VM_INDEXES[@]}"; do
     if ! [[ "$INDEX" =~ ^[0-9]+$ ]] || [ "$INDEX" -lt 1 ] || [ "$INDEX" -gt "${#VM_ARRAY[@]}" ]; then
@@ -52,12 +68,12 @@ for INDEX in "${VM_INDEXES[@]}"; do
         --access-config-name="$ACCESS_CONFIG_NAME" \
         --zone=$ZONE
 
-    # 添加新的外部访问配置，使用标准层级网络
-    echo "正在添加新的外部访问配置..."
+    # 添加新的外部访问配置
+    echo "正在添加新的外部访问配置 (网络层级: $NETWORK_TIER)..."
     gcloud compute instances add-access-config $INSTANCE_NAME \
         --zone=$ZONE \
         --access-config-name="$ACCESS_CONFIG_NAME" \
-        --network-tier=STANDARD
+        --network-tier="$NETWORK_TIER"
 
     # 获取并显示新的外部 IP 地址
     NEW_IP=$(gcloud compute instances describe $INSTANCE_NAME --zone=$ZONE --format="get(networkInterfaces[0].accessConfigs[0].natIP)")
