@@ -1,27 +1,26 @@
 #!/bin/bash
 
-# 定义路径
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"  # 脚本所在目录
-AZURE_DNS_SCRIPT="/root/azure_dns.sh"
-CHECK_IP_SCRIPT="/root/check_ip.sh"
+# 脚本配置
 CONFIG_FILE="/root/azure_dns_config.env"
-LOG_FILE="/root/check_ip.log"  # 日志和 IP 信息统一文件
-
-# 定义 cron 任务
+LOG_FILE="/root/check_ip.log"
 CRON_TASK="* * * * * /root/check_ip.sh"
 
-# 下载脚本内容
-download_scripts() {
-    echo "$(date) - Downloading scripts..." | tee -a "$LOG_FILE"
+# 下载的辅助脚本路径
+AZURE_DNS_SCRIPT="/root/azure_dns.sh"
+CHECK_IP_SCRIPT="/root/check_ip.sh"
 
-    # 下载 azure_dns.sh
+# 函数：下载辅助脚本
+download_scripts() {
+    echo "$(date) - 下载脚本..." | tee -a "$LOG_FILE"
+
+    # Azure DNS 更新脚本
     cat > "$AZURE_DNS_SCRIPT" <<'EOF'
 #!/bin/bash
 
 CONFIG_FILE="/root/azure_dns_config.env"
 
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo "配置文件不存在，请先添加变量。"
+    echo "配置文件不存在，请先添加变量。" >> "/root/check_ip.log"
     exit 1
 fi
 
@@ -43,7 +42,7 @@ AZURE_IP=$(curl -s -X GET "https://management.azure.com/subscriptions/$SUBSCRIPT
     -H "Content-Type: application/json" | jq -r '.properties.ARecords[0].ipv4Address')
 
 if [ "$CURRENT_IP" == "$AZURE_IP" ]; then
-    echo "No update needed. Current IP: $CURRENT_IP" >> "$LOG_FILE"
+    echo "No update needed. Current IP: $CURRENT_IP" >> "/root/check_ip.log"
     exit 0
 fi
 
@@ -66,11 +65,11 @@ curl -s -X PUT "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/reso
     -H "Content-Type: application/json" \
     -d "$UPDATE_PAYLOAD"
 
-echo "DNS record updated to IP: $CURRENT_IP" >> "$LOG_FILE"
+echo "DNS record updated to IP: $CURRENT_IP" >> "/root/check_ip.log"
 EOF
 
-    # 下载 check_ip.sh
-    cat > "$CHECK_IP_SCRIPT" <<EOF
+    # IP 检查脚本
+    cat > "$CHECK_IP_SCRIPT" <<'EOF'
 #!/bin/bash
 
 LOG_FILE="/root/check_ip.log"
@@ -81,42 +80,41 @@ IP_SERVICES=(
   "https://icanhazip.com"
 )
 
-for SERVICE in "\${IP_SERVICES[@]}"; do
-  CURRENT_IP=\$(curl -s4 "\$SERVICE")
-  if [ ! -z "\$CURRENT_IP" ]; then
-    echo "\$(date) - Retrieved IP: \$CURRENT_IP" >> "\$LOG_FILE"
+for SERVICE in "${IP_SERVICES[@]}"; do
+  CURRENT_IP=$(curl -s4 "$SERVICE")
+  if [ ! -z "$CURRENT_IP" ]; then
+    echo "$(date) - Retrieved IP: $CURRENT_IP" >> "$LOG_FILE"
     break
   fi
 done
 
-if [ -z "\$CURRENT_IP" ]; then
-  echo "\$(date) - Failed to retrieve IP. Exiting." >> "\$LOG_FILE"
+if [ -z "$CURRENT_IP" ]; then
+  echo "$(date) - Failed to retrieve IP. Exiting." >> "$LOG_FILE"
   exit 1
 fi
 
-LAST_IP=\$(grep -oP '(?<=Current IP: ).*' "\$LOG_FILE" | tail -n 1)
+LAST_IP=$(grep -oP '(?<=Current IP: ).*' "$LOG_FILE" | tail -n 1)
 
-if [ "\$CURRENT_IP" != "\$LAST_IP" ]; then
-  echo "\$(date) - IP changed to \$CURRENT_IP. Running /root/azure_dns.sh..." >> "\$LOG_FILE"
+if [ "$CURRENT_IP" != "$LAST_IP" ]; then
+  echo "$(date) - IP changed to $CURRENT_IP. Running /root/azure_dns.sh..." >> "$LOG_FILE"
   /root/azure_dns.sh
-  echo "\$(date) - IP updated to \$CURRENT_IP" >> "\$LOG_FILE"
+  echo "$(date) - IP updated to $CURRENT_IP" >> "$LOG_FILE"
 else
-  echo "\$(date) - No IP change." >> "\$LOG_FILE"
+  echo "$(date) - No IP change." >> "$LOG_FILE"
 fi
 EOF
 
     chmod +x "$AZURE_DNS_SCRIPT" "$CHECK_IP_SCRIPT"
-    echo "$(date) - Scripts downloaded and permissions set." >> "$LOG_FILE"
+    echo "$(date) - 脚本下载完成，权限已设置。" | tee -a "$LOG_FILE"
 }
 
-# 添加或修改变量
+# 函数：管理变量
 manage_variables() {
     echo "1. 添加变量"
     echo "2. 修改变量"
     read -p "请选择操作: " CHOICE
 
     if [ "$CHOICE" == "1" ]; then
-        echo "添加以下变量："
         read -p "CLIENT_ID: " CLIENT_ID
         read -p "CLIENT_SECRET: " CLIENT_SECRET
         read -p "TENANT_ID: " TENANT_ID
@@ -126,6 +124,7 @@ manage_variables() {
         read -p "RECORD_NAME: " RECORD_NAME
         read -p "TTL (默认 300): " TTL
         TTL=${TTL:-300}
+
         cat > "$CONFIG_FILE" <<EOF
 CLIENT_ID=$CLIENT_ID
 CLIENT_SECRET=$CLIENT_SECRET
@@ -136,16 +135,16 @@ DNS_ZONE=$DNS_ZONE
 RECORD_NAME=$RECORD_NAME
 TTL=$TTL
 EOF
-        echo "变量已添加并保存到 $CONFIG_FILE。" >> "$LOG_FILE"
+        echo "$(date) - 变量已保存至 $CONFIG_FILE。" | tee -a "$LOG_FILE"
     elif [ "$CHOICE" == "2" ]; then
         nano "$CONFIG_FILE"
-        echo "$(date) - 变量已修改。" >> "$LOG_FILE"
+        echo "$(date) - 变量已修改。" | tee -a "$LOG_FILE"
     else
-        echo "无效选项。"
+        echo "无效选项。" | tee -a "$LOG_FILE"
     fi
 }
 
-# 管理 cron 任务
+# 函数：管理 Cron 任务
 manage_cron() {
     echo "1. 添加 cron 任务"
     echo "2. 删除 cron 任务"
@@ -153,12 +152,12 @@ manage_cron() {
 
     if [ "$CHOICE" == "1" ]; then
         (crontab -l 2>/dev/null; echo "$CRON_TASK") | crontab -
-        echo "$(date) - Cron 任务已添加。" >> "$LOG_FILE"
+        echo "$(date) - Cron 任务已添加。" | tee -a "$LOG_FILE"
     elif [ "$CHOICE" == "2" ]; then
         crontab -l | grep -v "$CHECK_IP_SCRIPT" | crontab -
-        echo "$(date) - Cron 任务已删除。" >> "$LOG_FILE"
+        echo "$(date) - Cron 任务已删除。" | tee -a "$LOG_FILE"
     else
-        echo "无效选项。"
+        echo "无效选项。" | tee -a "$LOG_FILE"
     fi
 }
 
