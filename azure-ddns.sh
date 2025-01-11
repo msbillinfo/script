@@ -8,7 +8,7 @@ readonly LOCK_FILE="${SCRIPT_DIR}/.azure_dns.lock"
 readonly CRON_TASK="* * * * * ${SCRIPT_DIR}/check_ip.sh"
 
 # 下载的辅助脚本路径
-readonly AZURE_DNS_SCRIPT="${SCRIPT_DIR}/azure_dns.sh"
+readonly AZURE_DNS_SCRIPT="${SCRIPT_DIR}/azure.sh"
 readonly CHECK_IP_SCRIPT="${SCRIPT_DIR}/check_ip.sh"
 
 # 日志函数
@@ -222,7 +222,7 @@ main() {
     fi
 
     # 更新DNS记录
-    if "${SCRIPT_DIR}/azure_dns.sh"; then
+    if "${SCRIPT_DIR}/azure.sh"; then
         echo "$current_ip" > "$LAST_IP_FILE"
         log "INFO" "IP已更新: $current_ip"
     else
