@@ -56,14 +56,25 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $*" >> "$LOG_FILE"
 }
 
+# IP服务列表
+IP_SERVICES=(
+    "https://api.ipify.org"
+    "https://ipecho.net/plain"
+    "https://checkip.amazonaws.com"
+    "https://icanhazip.com"
+)
+
 # 获取当前IP
 get_current_ip() {
     local ip
-    ip=$(curl -s4 --connect-timeout 10 ifconfig.me)
-    if [[ -z "$ip" || "$ip" == *":"* ]]; then
-        ip=$(curl -s4 --connect-timeout 10 ipv4.ifconfig.me)
-    fi
-    echo "$ip"
+    for service in "${IP_SERVICES[@]}"; do
+        ip=$(curl -s4 --connect-timeout 5 "$service")
+        if [[ -n "$ip" && ! "$ip" =~ [^0-9.] ]]; then
+            echo "$ip"
+            return 0
+        fi
+    done
+    return 1
 }
 
 # 主逻辑
