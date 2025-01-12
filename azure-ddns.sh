@@ -260,7 +260,8 @@ validate_config() {
 manage_variables() {
     echo "1. 添加/更新变量"
     echo "2. 查看当前配置"
-    read -p "请选择操作: " choice
+    echo "3. 修改配置"
+    read -p "请选择操作 [1-3]: " choice
 
     case $choice in
         1)
@@ -299,11 +300,84 @@ EOF
                 log "WARNING" "配置文件不存在"
             fi
             ;;
+        3)
+            if [ -f "$CONFIG_FILE" ]; then
+                echo "当前配置:"
+                grep -v "SECRET" "$CONFIG_FILE"
+                echo "CLIENT_SECRET=********"
+
+                # 读取配置文件
+                source "$CONFIG_FILE"
+
+                # 允许修改的配置项
+                echo "请输入要修改的配置项:"
+                echo "1. CLIENT_ID  (客户端 ID)"
+                echo "2. CLIENT_SECRET  (客户端密钥)"
+                echo "3. TENANT_ID  (租户 ID)"
+                echo "4. SUBSCRIPTION_ID  (订阅 ID)"
+                echo "5. RESOURCE_GROUP  (资源组)"
+                echo "6. DNS_ZONE  (DNS 区域)"
+                echo "7. 记录名称 (RECORD_NAME)  (DNS 记录名称)"
+                echo "8. TTL  (生存时间)"
+                read -p "请选择要修改的配置项 [1-8]: " var_to_modify
+
+
+                # 修改相应的变量
+                case $var_to_modify in
+                    1)
+                        read -p "新的 CLIENT_ID: " CLIENT_ID
+                        ;;
+                    2)
+                        read -p "新的 CLIENT_SECRET: " CLIENT_SECRET
+                        ;;
+                    3)
+                        read -p "新的 TENANT_ID: " TENANT_ID
+                        ;;
+                    4)
+                        read -p "新的 SUBSCRIPTION_ID: " SUBSCRIPTION_ID
+                        ;;
+                    5)
+                        read -p "新的 RESOURCE_GROUP: " RESOURCE_GROUP
+                        ;;
+                    6)
+                        read -p "新的 DNS_ZONE: " DNS_ZONE
+                        ;;
+                    7)
+                        read -p "新的 RECORD_NAME: " RECORD_NAME
+                        ;;
+                    8)
+                        read -p "新的 TTL [300]: " TTL
+                        TTL=${TTL:-300}
+                        ;;
+                    *)
+                        log "WARNING" "无效的配置项"
+                        return
+                        ;;
+                esac
+
+                # 重新写入配置文件
+                cat > "$CONFIG_FILE" << EOF
+CLIENT_ID=${CLIENT_ID:-$CLIENT_ID}
+CLIENT_SECRET=${CLIENT_SECRET:-$CLIENT_SECRET}
+TENANT_ID=${TENANT_ID:-$TENANT_ID}
+SUBSCRIPTION_ID=${SUBSCRIPTION_ID:-$SUBSCRIPTION_ID}
+RESOURCE_GROUP=${RESOURCE_GROUP:-$RESOURCE_GROUP}
+DNS_ZONE=${DNS_ZONE:-$DNS_ZONE}
+RECORD_NAME=${RECORD_NAME:-$RECORD_NAME}
+TTL=${TTL:-$TTL}
+EOF
+
+                log "INFO" "配置已更新至 $CONFIG_FILE"
+            else
+                log "WARNING" "配置文件不存在"
+            fi
+            ;;
         *)
             log "WARNING" "无效选项"
             ;;
     esac
 }
+
 
 # 函数：管理Cron任务
 manage_cron() {
@@ -351,6 +425,26 @@ clear_logs() {
     fi
 }
 
+# 函数：执行 azure.sh 并返回日志 触发 DNS 更新
+run_azure_script() {
+    if [ -f "$AZURE_DNS_SCRIPT" ]; then
+        log "INFO" "正在执行 azure.sh 脚本..."
+        
+        # 执行脚本并捕获输出
+        output=$("$AZURE_DNS_SCRIPT" 2>&1)  # 捕获标准输出和错误输出
+        echo "$output" | tee -a "$LOG_FILE"  # 输出并追加到日志文件
+        
+        # 如果执行失败，输出错误
+        if [ $? -ne 0 ]; then
+            log "ERROR" "azure.sh 脚本执行失败"
+        else
+            log "INFO" "azure.sh 脚本执行成功"
+        fi
+    else
+        log "ERROR" "azure.sh 脚本不存在"
+    fi
+}
+
 
 # 主菜单
 main_menu() {
@@ -360,18 +454,20 @@ main_menu() {
         echo "2. 管理配置"
         echo "3. 管理定时任务"
         echo "4. 查看日志"
-		echo "5. 清理日志"
-        echo "6. 退出"
+        echo "5. 清理日志"
+        echo "6. 触发 DNS 更新"
+        echo "7. 退出"
         
-        read -p "请选择操作 [1-5]: " choice
+        read -p "请选择操作 [1-7]: " choice
         
         case $choice in
             1) check_dependencies && download_scripts ;;
             2) manage_variables ;;
             3) manage_cron ;;
             4) tail -n 50 "$LOG_FILE" ;;
-			5) clear_logs ;;
-            6) log "INFO" "退出脚本管理器"; exit 0 ;;
+            5) clear_logs ;;
+            6) run_azure_script ;;  # 触发 DNS 更新
+            7) log "INFO" "退出脚本管理器"; exit 0 ;;
             *) log "WARNING" "无效选项，请重新选择" ;;
         esac
     done
