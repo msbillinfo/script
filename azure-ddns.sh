@@ -330,6 +330,28 @@ manage_cron() {
     esac
 }
 
+clear_logs() {
+    if [ ! -f "$LOG_FILE" ]; then
+        log "ERROR" "日志文件不存在"
+        return 1
+    fi
+    
+    local log_size
+    log_size=$(du -sh "$LOG_FILE" | cut -f1)
+    
+    echo -e "日志文件当前大小: $log_size\n确定要清理日志吗? (回车默认是 y, 输入 n 取消): "
+    read -r confirm
+    
+    # 如果用户按回车或输入y/y，则清理日志，否则取消
+    if [[ -z "$confirm" || "$confirm" =~ ^[Yy]$ ]]; then
+        > "$LOG_FILE"
+        log "INFO" "日志已清理"
+    else
+        log "INFO" "取消日志清理"
+    fi
+}
+
+
 # 主菜单
 main_menu() {
     while true; do
@@ -338,7 +360,8 @@ main_menu() {
         echo "2. 管理配置"
         echo "3. 管理定时任务"
         echo "4. 查看日志"
-        echo "5. 退出"
+		echo "5. 清理日志"
+        echo "6. 退出"
         
         read -p "请选择操作 [1-5]: " choice
         
@@ -347,7 +370,8 @@ main_menu() {
             2) manage_variables ;;
             3) manage_cron ;;
             4) tail -n 50 "$LOG_FILE" ;;
-            5) log "INFO" "退出脚本管理器"; exit 0 ;;
+			5) clear_logs ;;
+            6) log "INFO" "退出脚本管理器"; exit 0 ;;
             *) log "WARNING" "无效选项，请重新选择" ;;
         esac
     done
