@@ -5,7 +5,9 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly CONFIG_FILE="${SCRIPT_DIR}/azure_dns_config.env"
 readonly LOG_FILE="${SCRIPT_DIR}/azure_dns.log"
 readonly LOCK_FILE="${SCRIPT_DIR}/.azure_dns.lock"
-readonly CRON_TASK="* * * * * ${SCRIPT_DIR}/check_ip.sh"
+readonly CHECK_IP_CRON="* * * * * ${SCRIPT_DIR}/check_ip.sh"
+readonly CLEANUP_LOG_CRON="0 5 * * * truncate -s 0 ${SCRIPT_DIR}/azure_dns.log"
+
 
 # 下载的辅助脚本路径
 readonly AZURE_DNS_SCRIPT="${SCRIPT_DIR}/azure.sh"
@@ -379,31 +381,49 @@ EOF
 }
 
 
-# 函数：管理Cron任务
+# 修改：管理Cron任务
 manage_cron() {
-    echo "1. 添加cron任务 (每1分钟检查)"
-    echo "2. 删除cron任务"
-    read -p "请选择操作: " choice
+    echo "1. 添加IP检查cron任务 (每1分钟检查)"
+    echo "2. 添加日志清理cron任务 (每天凌晨5点清理)"
+    echo "3. 删除IP检查cron任务"
+    echo "4. 删除日志清理cron任务"
+    echo "5. 查看所有cron任务"
+    read -p "请选择操作 [1-5]: " choice
 
     case $choice in
         1)
             if ! crontab -l 2>/dev/null | grep -q "$CHECK_IP_SCRIPT"; then
-                (crontab -l 2>/dev/null; echo "$CRON_TASK") | crontab -
-                log "INFO" "Cron任务已添加"
+                (crontab -l 2>/dev/null; echo "$CHECK_IP_CRON") | crontab -
+                log "INFO" "IP检查Cron任务已添加"
             else
-                log "WARNING" "Cron任务已存在"
+                log "WARNING" "IP检查Cron任务已存在"
             fi
             ;;
         2)
+            if ! crontab -l 2>/dev/null | grep -q "truncate.*azure_dns.log"; then
+                (crontab -l 2>/dev/null; echo "$CLEANUP_LOG_CRON") | crontab -
+                log "INFO" "日志清理Cron任务已添加（每天凌晨5点执行）"
+            else
+                log "WARNING" "日志清理Cron任务已存在"
+            fi
+            ;;
+        3)
             crontab -l 2>/dev/null | grep -v "$CHECK_IP_SCRIPT" | crontab -
-            log "INFO" "Cron任务已删除"
+            log "INFO" "IP检查Cron任务已删除"
+            ;;
+        4)
+            crontab -l 2>/dev/null | grep -v "truncate.*azure_dns.log" | crontab -
+            log "INFO" "日志清理Cron任务已删除"
+            ;;
+        5)
+            echo "当前Cron任务列表："
+            crontab -l 2>/dev/null | grep -E "$CHECK_IP_SCRIPT|azure_dns.log"
             ;;
         *)
             log "WARNING" "无效选项"
             ;;
     esac
 }
-
 clear_logs() {
     if [ ! -f "$LOG_FILE" ]; then
         log "ERROR" "日志文件不存在"
