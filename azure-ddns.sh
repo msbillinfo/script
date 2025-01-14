@@ -47,6 +47,21 @@ download_scripts() {
 
 set -euo pipefail
 
+# 设置 Telegram 机器人 Token 和聊天 ID
+TELEGRAM_TOKEN="" # 如果未设置则为空
+CHAT_ID=""
+
+# 用于发送消息的函数
+send_telegram_message() {
+    local message=$1
+    if [[ -z "$TELEGRAM_TOKEN" ]]; then
+        echo "Telegram Token 未设置，跳过发送消息: $message"
+        return 0
+    fi
+    local url="https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage"
+    curl -s -X POST "$url" -d chat_id="$CHAT_ID" -d text="$message"
+}
+
 CONFIG_FILE="$(dirname "$0")/azure_dns_config.env"
 LOCK_FILE="$(dirname "$0")/.azure_dns.lock"
 LOG_FILE="$(dirname "$0")/azure_dns.log"
@@ -55,7 +70,9 @@ LOG_FILE="$(dirname "$0")/azure_dns.log"
 log() {
     local level=$1
     shift
-    echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $*" >> "$LOG_FILE"
+    local message="$*"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [$level] $message" >> "$LOG_FILE"
+    send_telegram_message "[$level] $message"
 }
 
 # IP服务列表
