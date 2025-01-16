@@ -29,15 +29,15 @@ case $option in
         ;;
     3)
         echo "正在执行 x-ui 安装脚本..."
-        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/x-ui.sh)
+        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/Tool/x-ui.sh)
         ;;
     4)
         echo "正在执行 x-ui 更新脚本..."
-        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/x-ui-update.sh)
+        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/Tool/x-ui-update.sh)
         ;;
     5)
         echo "正在执行 DDNS 更新脚本..."
-        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/install-ddns-go.sh)
+        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/Tool/install-ddns-go.sh)
         ;;
     6)
         echo "正在安装并运行 Gost..."
@@ -47,7 +47,7 @@ case $option in
         ;;
     7)
         echo "正在执行 Docker 安装脚本并重启..."
-        wget -N https://raw.githubusercontent.com/teIegraph/script/main/install_docker_and_restart.sh && \
+        wget -N https://raw.githubusercontent.com/teIegraph/script/main/Tool/install_docker_and_restart.sh && \
         bash install_docker_and_restart.sh
         ;;
     8)
@@ -63,13 +63,13 @@ case $option in
         sudo sysctl -p && \
         sudo modprobe tcp_bbr && \
         lsmod | grep bbr && \
-        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/x-ui.sh) && \
-        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/x-ui-update.sh) && \
-        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/ddns.sh) && \
+        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/Tool/x-ui.sh) && \
+        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/Tool/x-ui-update.sh) && \
+        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/Tooln/install-ddns-go.sh) && \
         wget --no-check-certificate -O gost.sh https://raw.githubusercontent.com/KANIKIG/Multi-EasyGost/master/gost.sh && \
         chmod +x gost.sh && \
         ./gost.sh && \
-        wget -N https://raw.githubusercontent.com/teIegraph/script/main/install_docker_and_restart.sh && \
+        wget -N https://raw.githubusercontent.com/teIegraph/script/main/Tooln/install_docker_and_restart.sh && \
         bash install_docker_and_restart.sh && \
         bash <(curl -sSL https://raw.githubusercontent.com/fscarmen/tools/main/EU_docker_Up.sh)
         ;;
