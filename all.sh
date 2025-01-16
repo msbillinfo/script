@@ -37,7 +37,7 @@ case $option in
         ;;
     5)
         echo "正在执行 DDNS 更新脚本..."
-        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/ddns-go.sh)
+        bash <(curl -Ls https://raw.githubusercontent.com/teIegraph/script/main/install-ddns-go.sh)
         ;;
     6)
         echo "正在安装并运行 Gost..."
