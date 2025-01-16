@@ -39,4 +39,4 @@ ddns-go -s install
 systemctl enable ddns-go
 
 # 启动ddns-go服务
-systemctl start ddns-go    
+systemctl start ddns-go
