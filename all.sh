@@ -28,7 +28,7 @@ status_msg() {
 install_packages() {
   status_msg running "更新系统并安装基础软件包"
   sudo apt update -y
-  sudo apt install -y wget curl unzip jq
+  sudo apt install -y wget curl unzip jq nethogs
   status_msg success "软件包安装"
 }
 
